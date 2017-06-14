@@ -130,26 +130,10 @@ void loop() {
        Serial.println(bus_loc1[SPEED][index]);
        index++;
     }
-    
 
-      
-    JsonObject& vehicles = root["vehicles"][1];
-    JsonObject& bus_pos = vehicles["position"];
-    String bus_name = root["routename"];
-    String latitude = bus_pos["lat"];
-    String longitude = bus_pos["lon"];
-   
-    String bus_speed = bus_pos["speed"];
-    String msg = "Latitude = "+latitude+", Longitude = "+longitude+", Speed: "+bus_speed;
-  
-    Serial.println();
-    Serial.println(bus_name);
-    Serial.println(msg);
-    Serial.println(bus_loc1[LATITUDE][1],6);
-    Serial.println(bus_loc1[LONGITUDE][1],6);
-    Serial.println(bus_loc1[SPEED][1]);
     Serial.print("number of vehicles: ");
     Serial.println(vehicles1.size());
+    
     Serial.print("number of recorded vehicles: ");
     Serial.println(index);
     Serial.print("closing connection. Data at time: ");
