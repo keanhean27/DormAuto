@@ -7,6 +7,8 @@
  */
 
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
+#include <GoogleMapsApi.h>
 //visit https://bblanchon.github.io/ArduinoJson/api/index.html for library info
 #include <ArduinoJson.h>
 
@@ -17,9 +19,17 @@
 const char* ssid     = "Kean’s MacBook Air";
 const char* password = "77992729";
 
+
 #define WU_API_KEY "fa4898487cdd215a"
 #define WU_LOCATION "TW/Tainan"
 #define WU_URL "baseride.com"
+#define MAP_URL "maps.googleapis.com"
+#define MAP_KEY "AIzaSyCk0ECxF5sp8CB4TOJ0MWNZHMjV7P2oe0M"
+
+WiFiClient client;
+WiFiClientSecure s_client;
+GoogleMapsApi api(MAP_KEY, s_client);
+
 void setup() {
   Serial.begin(115200);
   delay(10);
@@ -53,12 +63,26 @@ void loop() {
 
   if((millis() <= refresh_rate+500 && millis() >= refresh_rate-500) || value == 0)
   {
+    getBusData();
+    checkGoogleMaps();
+  }
+
+  digitalWrite(14, LOW);
+    
+}
+
+String latitude1;
+String longitude1;
+
+//using api from baseride.com
+void getBusData()
+{
     digitalWrite(14, HIGH);
     Serial.print("connecting to ");
     Serial.println(WU_URL);
   
   // Use WiFiClient class to create TCP connections
-    WiFiClient client;
+    
     const int httpPort = 80;
     if (!client.connect("baseride.com", httpPort)) {
       Serial.println("connection failed");
@@ -143,9 +167,46 @@ void loop() {
     Serial.print("Next refresh at: ");
     Serial.println(refresh_rate);
     Serial.println();
-    }
 
-  digitalWrite(14, LOW);
-    
+}
+
+//using api from Google Map
+void checkGoogleMaps() {
+
+  String origin = "1.354708,103.687090";
+  String destination = "1.354677,103.687309";
+  String departureTime = "now"; //This can also be a timestamp, needs to be in the future for traffic info
+  String trafficModel = "best_guess"; //defaults to this anyways. see https://developers.google.com/maps/documentation/distance-matrix/intro#DistanceMatrixRequests for more info
+
+  
+  Serial.println("Getting traffic for " + origin + " to " + destination);
+    String responseString = api.distanceMatrix(origin, destination, departureTime, trafficModel);
+    Serial.println(responseString);
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& response = jsonBuffer.parseObject(responseString);
+    if (response.success()) {
+      if (response.containsKey("rows")) {
+        JsonObject& element = response["rows"][0]["elements"][0];
+        String status = element["status"];
+        if(status == "OK") {
+
+          String distance = element["distance"]["text"];
+          String duration = element["duration"]["text"];
+          String durationInTraffic = element["duration_in_traffic"]["text"];
+
+          Serial.println("Distance: " + distance);
+          Serial.println("Duration: " + duration);
+          Serial.println("Duration In Traffic: " + durationInTraffic);
+
+        }
+        else {
+          Serial.println("Got an error status: " + status);
+        }
+      } else {
+        Serial.println("Reponse did not contain rows");
+      }
+    } else {
+      Serial.println("Failed to parse Json");
+    }
 }
 
